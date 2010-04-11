@@ -1,21 +1,48 @@
 <?php
 // $Id: phpgedview.install,v 1.3 2006/08/24 11:49:53 karens Exp $
 
+/**
+ * @file
+ * The install file for PHPGEDVIEW allows the module to install (and uninstall) itself. This is required as this module uses its own table.
+ */
+
+/**
+ * Implementation of hook_install().
+ */
 function phpgedview_install() {
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      db_query("CREATE TABLE {phpgedview_user_map} (
-        `uid` int(10) NOT NULL default '0',
-        `pgv` varchar(30) character set utf8 NOT NULL default ''
-      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-      break;
-    case 'pgsql':
-      db_query("CREATE TABLE {phpgedview_user_map} (
-        `uid` int(10) NOT NULL default '0',
-        `pgv` varchar(30) character set utf8 NOT NULL default ''
-      );");
-      break;
-  }
+  // Create my tables.
+  drupal_install_schema('phpgedview');
 }
 
+/**
+ * Implementation of hook_schema().
+ */
+function phpgedview_schema() {
+  $schema['phpgedview_user_map'] = array(
+    'description' => t('The base table for nodes.'),
+    'fields' => array(
+      'uid' => array (
+        'description' => t('The uid of the user from the {users} table.'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'pgv' => array(
+        'description' => t('I dont know what this is for.'),
+        'type' => 'varchar',
+        'length' => '30',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+    ),
+  );
+  return $schema;
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function phpgedview_uninstall() {
+  // Drop my tables.
+  drupal_uninstall_schema('phpgedview');
+}
