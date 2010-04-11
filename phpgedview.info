@@ -1,0 +1,9 @@
+name = PhpGedView
+description = "Module to embed PhpGedView genealogy program into Drupal."
+
+
+; Information added by drupal.org packaging script on 2007-06-19
+version = "5.x-1.x-dev"
+project = "phpgedview"
+datestamp = "1182212481"
+

@@ -1,0 +1,994 @@
+<?php
+// $Id: phpgedview.module,v 1.8.2.5 2007/03/15 19:19:46 karens Exp $
+
+/**
+ * @file
+ * A module to embed PhpGedView genealogy program into Drupal
+ *
+ * Based on a program created for PostNuke by Jim Carey
+ * Adapted and maintained for Drupal by Karen Stevenson
+ *
+ * Wish List:
+ *   all of these are difficult enough that they won't get done any time soon!
+ *   but we have a connection to the PGV database and the ability to perform
+ *   user authentication, plus PGV's webservice & soap features that filter
+ *   results by the privacy settings of the user, so these are theoretically doable.
+ *
+ *  Add more synchronization of users between Drupal and PGV
+ *  Add Drupal blocks that pull data from PGV.
+ *  Add PGV events to Drupal calendars.
+ *  Create Drupal nodes from selected PGV records.
+ *  Add PGV search to Drupal search.
+ *  Add PGV info to user profiles.
+ */
+
+/**
+ * Implementation of hook_perm().
+ */
+function phpgedview_perm() {
+  return array('admin phpgedview', 'view phpgedview');
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function phpgedview_menu($may_cache) {
+  global $user;
+  phpgedview_set_cookies($user);
+  $items = array();
+
+  if ($may_cache) {
+
+    // paths to the settings screen
+
+    $items[] = array(
+      'path' => 'admin/settings/phpgedview',
+      'title' => t('PhpGedView'),
+      'description' => t('Configure PhpGedView paths, directories, and labels.'),
+      'access' => user_access('admin phpgedview'),
+      'type' => MENU_NORMAL_ITEM,
+      'callback' => 'drupal_get_form',
+      'callback arguments' => 'phpgedview_settings_form',
+    );
+    $items[] = array(
+      'path' => 'admin/settings/phpgedview/main',
+      'title' => t('Configure'),
+      'access' => user_access('admin phpgedview'),
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'callback' => 'drupal_get_form',
+      'callback arguments' => 'phpgedview_settings_form',
+      'weight' => -10,
+    );
+    $items[] = array(
+      'path' => 'admin/settings/phpgedview/map',
+      'title' => t('Map Users'),
+      'access' => user_access('admin phpgedview'),
+      'type' => MENU_LOCAL_TASK,
+      'callback' => 'drupal_get_form',
+      'callback arguments' => 'phpgedview_user_map_form',
+      'weight' => 0,
+    );
+  }
+  else {
+
+    phpgedview_set_cookies($user);
+
+    // Set the external paths.
+    if (variable_get('phpgedview_configured', 0) && phpgedview_type() == 'external') {
+
+      if ($_COOKIE['pgv_embedded'] != 0) {
+        setcookie('pgv_embedded', 0, 0, '/');
+      }
+
+      // Anonymous users and robots get a regular external link.
+      // No special handling required.
+      if (!$user->uid) {
+
+        $items[] = array(
+          'path' => phpgedview_external_path(),
+          'type' => MENU_NORMAL_ITEM,
+          'title' => phpgedview_name(),
+          'access' => user_access('view phpgedview'),
+          'weight' => -10,
+          );
+      }
+      // Authenticated users get passed through a function
+      // that can check status and update databases before redirecting them.
+      else {
+
+        $items[] = array(
+          'path' => phpgedview_path(),
+          'type' => MENU_NORMAL_ITEM,
+          'title' => phpgedview_name(),
+          'access' => user_access('view phpgedview'),
+          'callback' => 'phpgedview_external_page',
+          'callback arguments' => array('index.php'),
+          'weight' => -10,
+          );
+        $items[] = array(
+          'path' => phpgedview_path() .'/admin',
+          'type' => MENU_SUGGESTED_ITEM,
+          'title' => t('Admin PhpGedView'),
+          'access' => user_access('admin phpgedview'),
+          'callback' => 'phpgedview_external_page',
+          'callback arguments' => array('admin.php'),
+          'weight' => -10,
+          );
+        $items[] = array(
+          'path' => phpgedview_path() .'/admin/useradmin',
+          'type' => MENU_SUGGESTED_ITEM,
+          'title' => t('Edit PhpGedView Users'),
+          'access' => user_access('admin phpgedview'),
+          'callback' => 'phpgedview_external_page',
+          'callback arguments' => array('useradmin.php', arg(3)),
+          'weight' => -9,
+          );
+      }
+    }
+
+    // A variety of embedded paths are provided so the main sections in the iframe are
+    // bookmarkable, and to provide ways to send an admin directly to the user edit
+    // page or some other special destination.
+
+    elseif (variable_get('phpgedview_configured', 0) && phpgedview_type() == 'embedded') {
+
+      if ($_COOKIE['pgv_embedded'] != 1) {
+        setcookie('pgv_embedded', 1, 0, '/');
+      }
+
+      $items[] = array(
+        'path' => phpgedview_path(),
+        'type' => MENU_NORMAL_ITEM,
+        'title' => phpgedview_name(),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('index.php'),
+        'weight' => -10,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/index',
+        'type' => MENU_DEFAULT_LOCAL_TASK,
+        'title' => t('Welcome'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('index.php?command=gedcom'),
+        'weight' => -10,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/index/index',
+        'type' => MENU_DEFAULT_LOCAL_TASK,
+        'title' => t('Welcome'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('index.php?command=gedcom'),
+        'weight' => -10,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/index/portal',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('My Portal'),
+        'access' => array(user_access('view phpgedview'), $access),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('index.php?command=user'),
+        'weight' => -9,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/pedigree',
+        'type' => MENU_LOCAL_TASK,
+        'access' => 'phpgedview view',
+        'title' => t('Charts'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('pedigree.php'),
+        'weight' => -8,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/pedigree/pedigree',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Pedigree'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('pedigree.php'),
+        'weight' => -10,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/pedigree/descendancy',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Decendancy'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('descendancy.php'),
+        'weight' => -9,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/pedigree/ancestry',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Ancestry'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('ancestry.php'),
+        'weight' => -8,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/pedigree/compact',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Compact'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('compact.php'),
+        'weight' => -7,
+        );
+      $items[] = array(
+         'path' => phpgedview_path() .'/pedigree/fanchart',
+         'type' => MENU_LOCAL_TASK,
+         'title' => t('Circle'),
+         'access' => user_access('view phpgedview'),
+         'callback' => 'phpgedview_embedded_page',
+         'callback arguments' => array('fanchart.php'),
+         'weight' => -8,
+         );
+      $items[] = array(
+        'path' => phpgedview_path() .'/pedigree/hourglass',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Hourglass'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('hourglass.php'),
+        'weight' => -7,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/pedigree/familybook',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Family'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('familybook.php'),
+        'weight' => -6,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/pedigree/timeline',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Timeline'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('timeline.php'),
+        'weight' => -5,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/pedigree/relationship',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Relationship'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('relationship.php'),
+        'weight' => -4,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/indilist',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Lists'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('indilist.php'),
+        'weight' => -7,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/indilist/indilist',
+        'type' => MENU_DEFAULT_LOCAL_TASK,
+        'title' => t('Individual'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('indilist.php'),
+        'weight' => -10,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/indilist/famlist',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Family'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('famlist.php'),
+        'weight' => -9,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/indilist/sourcelist',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Source'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('sourcelist.php'),
+        'weight' => -8,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/indilist/repolist',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Repository'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('repolist.php'),
+        'weight' => -7,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/indilist/placelist',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Place'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('placelist.php'),
+        'weight' => -6,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/indilist/medialist',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Media'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('medialist.php'),
+        'weight' => -5,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/indilist/patriarchlist',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Patriarch'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('patriarchlist.php'),
+        'weight' => -4,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/indilist/aliveinyear',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Alive in Year'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('aliveinyear.php'),
+        'weight' => -3,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/calendar',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Calendar'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('calendar.php'),
+        'weight' => -6,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/calendar/day',
+        'type' => MENU_DEFAULT_LOCAL_TASK,
+        'title' => t('Day'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('calendar.php'),
+        'weight' => -6,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/calendar/calendar',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Month'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('calendar.php?action=calendar'),
+        'weight' => -6,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/calendar/year',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Year'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('calendar.php?action=year'),
+        'weight' => -6,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/reportengine',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Reports'),
+        'access' => user_access('view phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('reportengine.php'),
+        'weight' => -5,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/search',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Search'),
+        'access' => array(user_access('view phpgedview'), $access),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('search.php?action=general'),
+        'weight' => 1,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/search/search',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('General Search'),
+        'access' => array(user_access('view phpgedview'), $access),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('search.php?action=general'),
+        'weight' => -8,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/search/soundex',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Soundex Search'),
+        'access' => array(user_access('view phpgedview'), $access),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('search.php?action=soundex'),
+        'weight' => -7,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/admin',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Admin'),
+        'access' => user_access('admin phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('admin.php'),
+        'weight' => 0,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/admin/admin',
+        'type' => MENU_DEFAULT_LOCAL_TASK,
+        'title' => t('Admin'),
+        'access' => user_access('admin phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('admin.php'),
+        'weight' => -10,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/admin/useradmin',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Edit Users'),
+        'access' => user_access('admin phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('useradmin.php', arg(3)),
+        'weight' => -9,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/admin/editgedcoms',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Edit Gedcoms'),
+        'access' => user_access('admin phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('editgedcoms.php'),
+        'weight' => -8,
+        );
+      $items[] = array(
+        'path' => phpgedview_path() .'/admin/media',
+        'type' => MENU_LOCAL_TASK,
+        'title' => t('Manage Media'),
+        'access' => user_access('admin phpgedview'),
+        'callback' => 'phpgedview_embedded_page',
+        'callback arguments' => array('media.php'),
+        'weight' => -7,
+      );
+    }
+  }
+  return $items;
+}
+
+function phpgedview_name() {
+  return variable_get('phpgedview_name', t('PhpGedView'));
+}
+
+function phpgedview_directory() {
+  return variable_get('phpgedview_directory', '/phpgedview/');
+}
+
+function phpgedview_path() {
+  return variable_get('phpgedview_path', 'phpgedview');
+}
+function phpgedview_prefix() {
+  return variable_get('phpgedview_prefix', '');
+}
+function phpgedview_type() {
+  return variable_get('phpgedview_type', 'embedded');
+}
+
+/**
+ * Relative path to external application.
+ *
+ * We're keeping the path relative so session info is not appended
+ * to urls and so we can create a Drupal menu item for this path and
+ * use Drupal access control over the link.
+ */
+function phpgedview_external_path() {
+  // strip the leading slash from the external directory
+  $directory = substr(phpgedview_directory(), 1);
+  // find out how deep the Drupal installation is
+  $internal_depth = intval(sizeof(explode('/', base_path())) - 2);
+  // prepend ../ enough times to get a relative link back to the external program
+  return str_repeat('../', $internal_depth) . $directory;
+}
+
+/**
+ *  Callback for external PhpGedView page.
+ *
+ *  @path - the path to take in PGV
+ *  @uid  - if needed, the uid of the user to edit
+ */
+function phpgedview_external_page($path = 'index.php', $uid = 0) {
+  global $user;
+  $usernames = phpgedview_user_map();
+
+  // If this user is not in the map yet, they will be added to PGV
+  // when they follow this link, so add them to the map.
+  if (!$username  = $usernames[$user->uid]) {
+    $username = $user->name;
+    db_query("INSERT INTO {phpgedview_user_map} (uid, pgv) VALUES (%d, '%s')", array($user->uid, $username));
+  }
+
+  if ($uid > 0) {
+    $path .= '?action=edituser&username='. $username;
+  }
+
+  $url = phpgedview_external_path() ."modules/cms_interface/cms_login.php";
+  drupal_goto($url, 'path='. urlencode($path));
+}
+
+/**
+ *  Callback for embedded PhpGedView page
+ *
+ *  @path - the path to take in PGV
+ *  @uid  - if needed, the uid of the user to edit
+ */
+function phpgedview_embedded_page($path = 'index.php', $uid = 0) {
+  global $user;
+
+  $usernames = phpgedview_user_map();
+
+  // If this user is not in the map yet, they will be added to PGV
+  // when they follow this link, so add them to the map.
+  if (!$username  = $usernames[$user->uid]) {
+    $username = $user->name;
+    db_query("INSERT INTO {phpgedview_user_map} (uid, pgv) VALUES (%d, '%s')", array($user->uid, $username));
+  }
+
+  if ($uid > 0) {
+    $path .= '?action=edituser&username='. $username;
+  }
+  $url = phpgedview_directory() ."modules/cms_interface/cms_login.php?path=". urlencode($path);
+
+  drupal_add_css(drupal_get_path('module', 'phpgedview') .'/phpgedview.css');
+  drupal_add_js(drupal_get_path('module', 'phpgedview') .'/postwrap.js');
+
+  return '<div class="contentpane">
+<iframe onload="iFrameHeight()" id="blockrandom" src="' .$url .'" width="100%" height="500" scrolling="auto" align="top" frameborder="0" class="wrapper">
+This option will not work correctly.  Unfortunately, your browser does not support Inline Frames. </iframe></div>';
+
+}
+
+/**
+ *  Configuration settings form
+ */
+function phpgedview_settings_form() {
+
+  $form['setup'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Program Settings'),
+    );
+  $form['setup']['phpgedview_directory'] = array(
+    '#title' => t('PhpGedView base directory'),
+    '#type' => 'textfield',
+    '#default_value' => phpgedview_directory(),
+    '#description' => t('The absolute path to the external PhpGedView installation, relative to the web root (i.e. /phpgedview/), must have a trailing slash.'),
+    '#required' => TRUE,
+    );
+  $form['setup']['phpgedview_prefix'] = array(
+    '#title' => t('PhpGedView prefix'),
+    '#type' => 'textfield',
+    '#default_value' => phpgedview_prefix(),
+    '#description' => t('The prefix used in the PhpGedView database.'),
+    );
+  global $db_url;
+  if (!is_array($db_url) || empty($db_url['phpgedview'])) {
+    $form['setup']['phpgedview_db'] = array(
+      '#title' => t('PhpGedView database connection'),
+      '#type' => 'textfield',
+      '#default_value' => variable_get('phpgedview_db', 'mysql://username:password@localhost/databasename'),
+      '#description' => t('The database setting for the PGV database, in the format mysql://username:password@localhost/databasename. Read INSTALL.txt for instructions on how to identify this value in the settings.php file instead of in this form, a method which is more secure.'),
+      );
+  }
+  $form['setup']['phpgedview_name'] = array(
+    '#title' => t('Menu Name'),
+    '#type' => 'textfield',
+    '#default_value' => phpgedview_name(),
+    '#description' => t('The name to use for PhpGedView in links and labels. You can label it PhpGedView or Geneology or Family Tree, or anything else.'),
+    '#required' => TRUE,
+    );
+  $form['setup']['phpgedview_path'] = array(
+    '#title' => t('Internal path'),
+    '#type' => 'textfield',
+    '#default_value' => phpgedview_path(),
+    '#description' => t('The path to use for internal links and menus. Do not use the path that leads to the external installation nor other valid paths. Use no leading or trailing slashes.'),
+    '#required' => TRUE,
+    );
+  $form['setup']['phpgedview_type'] = array(
+    '#title' => t('Integration type'),
+    '#type' => 'radios',
+    '#options' => array('embedded' => t('Embedded'), 'external' => t('External')),
+    '#default_value' => phpgedview_type(),
+    '#description' => t('The method to use for integrating PhpGedView into Drupal. The embedded option displays PGV in an iframe in a Drupal page. The external option links users to the stand-alone PGV program. Both methods allow you to use a single login for both programs.'),
+    '#required' => TRUE,
+    );
+
+  $form +=  phpgedview_user_form('settings');
+  variable_set('phpgedview_configured', 1);
+  return system_settings_form($form);
+
+}
+
+/**
+ *  User settings form.
+ */
+function phpgedview_user_form($type = 'settings', $edit = NULL) {
+
+  if ($type == 'settings') {
+    $form['users'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('User Defaults'),
+      '#description' => t('Set up the values below for default rights for new users in PhpGedView when they are created automatically by this module. When in doubt, give users the lowest usual level of access, then manually update those who should have more rights.'),
+      );
+    $form['users']['phpgedview_def_create_user'] = array(
+      '#title' => t('Create users'),
+      '#type' => 'select',
+      '#options' => array('no' => t('no'), 'yes' => t('yes')),
+      '#default_value' => variable_get('phpgedview_def_create_user', 'yes'),
+      '#description' => t('Create Drupal users in PhpGEDView if they do not already exist.'),
+      );
+  }
+  $form['users']['phpgedview_def_gedcom'] = array(
+    '#title' => t('Gedcom'),
+    '#type' => 'textfield',
+    '#default_value' => ($type == 'settings' || $edit == NULL) ? variable_get('phpgedview_def_gedcom', '') : $edit['phpgedview_def_gedcom'],
+    );
+  $form['users']['phpgedview_def_rootid'] = array(
+    '#title' => t('Root id'),
+    '#type' => 'textfield',
+    '#default_value' => ($type == 'settings' || $edit == NULL) ? variable_get('phpgedview_def_rootid', '') : $edit['phpgedview_def_rootid'],
+    );
+  $form['users']['phpgedview_def_language'] = array(
+    '#title' => t('Language'),
+    '#type' => 'textfield',
+    '#default_value' => ($type == 'settings' || $edit == NULL) ? variable_get('phpgedview_def_language', 'english') : $edit['phpgedview_def_language'],
+    );
+  $form['users']['phpgedview_def_theme'] = array(
+    '#title' => t('Theme'),
+    '#type' => 'textfield',
+    '#default_value' => ($type == 'settings' || $edit == NULL) ? variable_get('phpgedview_def_theme', '') : $edit['phpgedview_def_theme'],
+    '#description' => t('Either blank to use the default theme, or in the format \'themes/themename/\'. Must have a trailing slash.'),
+    );
+  $form['users']['phpgedview_def_contact_method'] = array(
+    '#title' => t('Contact method'),
+    '#type' => 'select',
+    '#options' => array(
+      'none' => t('none'),
+      'mailto' => t('email'),
+      'messaging' => t('Internal messaging'),
+      'messaging2' => t('Internal + email')
+      ),
+    '#default_value' => ($type == 'settings' || $edit == NULL) ? variable_get('phpgedview_def_contact_method', 'messaging2') : $edit['phpgedview_def_contact_method'],
+    );
+  $form['users']['phpgedview_def_canedit'] = array(
+    '#title' => t('Access level'),
+    '#type' => 'select',
+    '#default_value' => ($type == 'settings' || $edit == NULL) ? variable_get('phpgedview_def_canedit', 'access') : $edit['phpgedview_def_canedit'],
+    '#options' => array(
+      'none'   => t('no access'),
+      'access' => t('access only'),
+      'edit'   => t('edit'),
+      'admin'  => t('admin'),
+     ),
+   );
+  $form['users']['phpgedview_def_canadmin'] = array(
+    '#title' => t('Administration rights'),
+    '#type' => 'select',
+    '#options' => array('no' => t('has no admin rights'), 'yes' => t('has admin rights')),
+    '#default_value' => ($type == 'settings' || $edit == NULL) ? variable_get('phpgedview_def_canadmin', 'no') : $edit['phpgedview_def_canadmin'],
+    );
+  $form['users']['phpgedview_def_verified_by_admin'] = array(
+    '#title' => t('Mark verified'),
+    '#type' => 'select',
+    '#options' => array('no' => t('no'), 'yes' => t('yes')),
+    '#default_value' => ($type == 'settings' || $edit == NULL) ? variable_get('phpgedview_def_verified_by_admin', 'yes') : $edit['phpgedview_def_verified_by_admin'],
+    '#description' => t('Consider this person to be verified by an admin?'),
+    );
+  $form['users']['phpgedview_def_verified'] = array(
+    '#type' => 'hidden',
+    '#value' => ($type == 'settings' || $edit == NULL) ? variable_get('phpgedview_def_verified', 'yes') : $edit['phpgedview_def_verified'],
+    );
+  $form['users']['phpgedview_def_password'] = array(
+    '#type' => 'hidden',
+    '#value' => ($type == 'settings' || $edit == NULL) ? variable_get('phpgedview_def_password', 'none') : $edit['phpgedview_def_password'],
+    );
+
+  return $form;
+}
+
+/**
+ *  Form to map Drupal users to PGV users.
+ */
+function phpgedview_user_map_form() {
+  // display user map
+  $form = array();
+  $map = array();
+
+  $pgv     = (array) phpgedview_pgv_users();
+  $drupal  = (array) phpgedview_drupal_users();
+  $map     = phpgedview_user_map();
+  $options = drupal_map_assoc(array_merge(array(''), array_keys($pgv)));
+  $form['ids'] = array();
+
+  foreach ($drupal as $name => $account) {
+    // skip the anonymous user
+    if ($name > '') {
+      $form['uid_'. $account->uid] = array(
+        '#type' => 'select',
+        '#options' => $options,
+        // use mapped name if available, otherwise see if there is a matching value in $pgv
+        '#default_value' => isset($map[$account->uid]) ? $map[$account->uid] : $pgv[$name]->u_username,
+        '#label' => $name,
+      );
+    }
+  }
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+    );
+  return $form;
+}
+
+/**
+ *  Theme the user map form into a table
+ */
+function theme_phpgedview_user_map_form($form) {
+
+  $output = t('<p>Match Drupal usernames to the related username in PhpGedView. Anyone with a blank value
+    will be treated as a nonauthenticated user in PhpGedView.</p>
+   <p>The PGV list shows users currently set up in PGV. If you have users set up in Drupal but not in PGV,
+   they will automatically be added as PGV users the first time they actually access the program.
+   They will initally be set up with whatever you configure here as the default permissions. Once
+   they have been added as PGV users, you can edit their PGV permissions in the PGV program to change
+   the permissions as needed.</p>');
+  $rows = array();
+  foreach ($form as $id => $name) {
+    if (strstr($id, 'uid_')) {
+      $rows[] = array($name['#label'], drupal_render($form[$id]));
+    }
+  }
+  $output .= theme('table', array(t('Drupal'), t('PGV')), $rows);
+  $output .= drupal_render($form);
+  return $output;
+}
+
+/**
+ *  Update the user map table
+ */
+function phpgedview_user_map_form_submit($form_id, $form_values) {
+  global $user;
+
+  // Add new values to the map.
+  foreach ($form_values as $key => $val) {
+    $uid = intval(str_replace('uid_', '', $key));
+    db_query("INSERT INTO {phpgedview_user_map} (uid, pgv) VALUES (%d, '%s')", array($uid, $val));
+  }
+
+  // Get current values and clean up since PGV may have changes that haven't been recorded in Drupal.
+
+  $pgv     = (array) phpgedview_pgv_users();
+  $drupal  = (array) phpgedview_drupal_users();
+  $map     = phpgedview_user_map();
+
+  foreach ($map as $key => $value) {
+    if (!array_key_exists($value, $pgv) || !array_key_exists($key, $drupal)) {
+      db_query("DELETE FROM {phpgedview_user_map} WHERE pgv = '%s'", $value);
+    }
+  }
+
+  // Make sure the current user gets logged in properly once the mapping is done
+  // in case they are mapping themselves for the first time.
+  phpgedview_set_cookies($user);
+}
+
+
+/**
+ *  A function to get an array of the pgv user info.
+ */
+function phpgedview_pgv_users() {
+
+  $pgv = array();
+  if (phpgedview_pgv_connect()) {
+    $results = db_query("SELECT * FROM ". phpgedview_prefix() ."users ORDER BY u_username");
+    while($arr = db_fetch_object($results)) {
+      $pgv[$arr->u_username] = $arr;
+    }
+  }
+  phpgedview_pgv_disconnect();
+  return $pgv;
+
+}
+
+/**
+ *  A function to get an array of the drupal user info
+ */
+function phpgedview_drupal_users() {
+
+  $results = db_query("SELECT * FROM {users} ORDER BY name");
+  while ($arr = db_fetch_object($results)) {
+    $drupal[$arr->name] = $arr;
+  }
+  return $drupal;
+
+}
+
+/**
+ *  A function to get the user map array
+ */
+function phpgedview_user_map() {
+
+  $results = db_query("SELECT * FROM {phpgedview_user_map}");
+  while ($arr = db_fetch_object($results)) {
+    $map[$arr->uid] = $arr->pgv;
+  }
+  return $map;
+
+}
+
+/**
+ *  Implementation of hook_form_alter.
+ *
+ *  Handle login requests redirected from PhpGedView.
+ */
+function phpgedview_form_alter($form_id, &$form) {
+
+  // coming from a link in PGV, no login info provided yet
+  if ($form_id == 'user_login' && strstr($_GET['url'], 'ged')) {
+
+    // pass the url to the form so user will return to that page
+    $form['#redirect'] = phpgedview_directory() . urldecode($_GET['url']);
+
+  // coming from a submitted PGV login form
+  } elseif ($form_id == 'user_login' &&  $_POST['ged'] && $_POST['url']) {
+
+    $_REQUEST['destination'] = phpgedview_directory() . $_POST['url'];
+
+    user_authenticate($_POST['username'], $_POST['password']);
+    exit;
+  }
+
+}
+
+/**
+ * Implementation of hook_user().
+ */
+function phpgedview_user($op, &$edit, &$account, $category = NULL) {
+
+  switch ($op) {
+
+  case ('insert'):
+  case ('update'):
+  case ('submit'):
+  case ('login'):
+      phpgedview_set_cookies($account);
+      break;
+
+  case ('logout'):
+      phpgedview_unset_cookies();
+      break;
+
+  case ('delete'):
+      db_query("DELETE FROM {phpgedview_user_map} WHERE uid=".$account->uid);
+      break;
+
+  // display a link on the Drupal user account to their account in PhpGedView
+  case ('view'):
+      if (user_access('admin phpgedview')) {
+        $links[] = phpgedview_userlink($account->uid);
+        return array(phpgedview_name() => array(array('value' => theme('item_list', $links), 'title' => '')));
+      }
+      break;
+  }
+}
+
+function phpgedview_set_cookies($account, $reset = FALSE) {
+
+  if ($account->uid > 0 && ($reset || !isset($_COOKIE['pgv_permissions']))) {
+    $map = phpgedview_user_map();
+    $username = $map[$account->uid];
+
+    phpgedview_unset_cookies();
+
+   	// set pgv_user so that they will be logged in in gedview
+	  phpgedview_set_value('post_user', $username);
+	  phpgedview_set_value('post_email', $account->mail);
+    phpgedview_set_value('post_canedit', $canedit);
+
+    //setup the  post_config variables as cookies so postgedview doesnt need to read them
+	  phpgedview_set_value('def_canadmin', variable_get('phpgedview_def_canadmin', 'no'));
+	  phpgedview_set_value('def_canedit', variable_get('phpgedview_def_canedit', 'access'));
+	  phpgedview_set_value('def_rootid', variable_get('phpgedview_def_rootid', ''));
+	  phpgedview_set_value('def_verified', variable_get('phpgedview_def_verified', 'yes'));
+	  phpgedview_set_value('def_verified_by_admin', variable_get('phpgedview_def_verified_by_admin', 'yes'));
+	  phpgedview_set_value('def_create_user', variable_get('phpgedview_def_create_user', 'yes'));
+	  phpgedview_set_value('def_language', variable_get('phpgedview_def_language', 'english'));
+	  phpgedview_set_value('def_upass', variable_get('phpgedview_def_upass', ''));
+	  phpgedview_set_value('def_gedcom', variable_get('phpgedview_def_gedcom', ''));
+	  phpgedview_set_value('def_contact_method', variable_get('phpgedview_def_contact_method', 'messaging2'));
+  	phpgedview_set_value('def_theme', variable_get('phpgedview_def_theme', ''));
+  }
+  setcookie('pgv_permissions', base64_encode(serialize((array) $GLOBALS['phpgedview']['permissions'])), 0, '/');
+}
+
+function phpgedview_unset_cookies() {
+
+  phpgedview_set_value('post_user', '');
+  phpgedview_set_value('post_email', '');
+  phpgedview_set_value('post_canedit', '');
+  phpgedview_set_value('def_canadmin', '');
+  phpgedview_set_value('def_canedit', '');
+  phpgedview_set_value('def_rootid', '');
+  phpgedview_set_value('def_verified', '');
+  phpgedview_set_value('def_verified_by_admin', '');
+  phpgedview_set_value('def_create_user', '');
+  phpgedview_set_value('def_language', '');
+  phpgedview_set_value('def_upass', '');
+  phpgedview_set_value('def_gedcom', '');
+  phpgedview_set_value('def_contact_method', '');
+  phpgedview_set_value('def_theme', '');
+  setcookie('pgv_permissions', serialize(array()), 0, '/');
+
+}
+
+function phpgedview_set_value($key, $value) {
+  $GLOBALS['phpgedview']['permissions'][$key] = $value;
+}
+
+/**
+ *  A link to a PhpGedView user edit screen
+ */
+function phpgedview_userlink($uid) {
+  return l(t('Edit Account'), (phpgedview_type() == 'embedded' ? phpgedview_path() .'/admin/useradmin/'. $uid : phpgedview_external_page('useradmin.php', $uid)));
+}
+
+/**
+ *  Attempt to connect to the PGV database.
+ *
+ *  The database config could be set either in the variable 'phpgedview_db' or manually by
+ *  altering settings.php to make $db_url an array with 'phpgedview' as one of the keys.
+ *
+ *  @return TRUE if successful, FALSE if not.
+ */
+function phpgedview_pgv_connect() {
+  global $db_url;
+
+  if (!is_array($db_url)) {
+    $drupal_db = $db_url;
+    $db_url = array();
+    $db_url['default'] = $drupal_db;
+  }
+  if (!isset($db_url['phpgedview'])) {
+    $pgv_db = variable_get('phpgedview_db', 'mysql://username:password@localhost/databasename');
+    if (!empty($pgv_db) && $pgv_db != 'mysql://username:password@localhost/databasename') {
+      $db_url['phpgedview'] = $pgv_db;
+    }
+  }
+
+  if (empty($db_url['phpgedview'])) {
+    drupal_set_message(t('No PGV database connection information has been entered.'), 'error');
+    return FALSE;
+  }
+  if (!db_set_active('phpgedview')) {
+    drupal_set_message(t('Unable to access the PhpGedView database.'), 'error');
+    return FALSE;
+  }
+  else {
+    return TRUE;
+  }
+
+}
+
+/**
+ * Disconnect for the PGV database.
+ */
+function phpgedview_pgv_disconnect() {
+  db_set_active('default');
+}

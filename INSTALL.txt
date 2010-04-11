@@ -1,0 +1,133 @@
+This is a module designed to embed and integrate PhpGedView version 4 into Drupal
+It will only work with Drupal Version 4.7+
+
+PhpGedView and Drupal can be located anywhere, so long as the domain is the same 
+(i.e. PhpGedView does not need to be installed within the Drupal installation).
+
+There are a number of steps to get this working. They aren't difficult, you just need to check each one
+off to be sure nothing is missed.
+
+
+PHPGEDVIEW SETUP
+
+1. Get PhpGedView installed and working as a stand-alone installation before trying to embed it.
+   (Files are on the PhpGedView site at http://www.phpgedview.net/).
+
+2. STEP TWO IS NO LONGER REQUIRED
+
+3. Remove all login blocks from PhpGedView welcome and portal screens. You may want to move those
+   block files into another folder so they aren't available to users who customize their own screens
+   but are not lost in case you decide you want to use them again. You will see these blocks when
+   you select 'Customize this Gedcom' on the PGV Welcome page.
+   
+4. Add themes to PGV that are designed to work well with Drupal, either embedded or not.
+   You can get these themes (called Color Pallets) on SourceForge at:
+   https://sourceforge.net/tracker/index.php?func=detail&aid=1626889&group_id=55456&atid=477081
+      
+5. You can postpone this step until you are sure the integrated program is working well.
+   Open the PhpGedView 'config.php' file and change the following lines:
+
+   * this should be changed as needed so it will point to your Drupal login page
+   * This change will ensure that anyone who fills out a PGV login form will get redirected
+   * to Drupal to be logged in there, too. This way people can login in either application
+   * and be logged in in both.
+   $LOGIN_URL = "/drupal/user/login"; 
+   
+   * turn off the PhpGedView registration system, we will be using Drupal registration
+   $USE_REGISTRATION_MODULE = false; 
+
+   * (Optional). You may want to force users to use a theme that works well with your Drupal theme
+   $ALLOW_USER_THEMES = false;
+
+   * Probably not necessary, but we're not using the PhpGedView login system
+   $ALLOW_REMEMBER_ME = false;
+
+
+DRUPAL SETUP
+
+1. Put the phpgedview folder containing the other files into your Drupal modules directory.
+
+2. Open up your 'settings.php' file in Drupal. Scroll down to where the $db_url is defined.
+   Change the existing setup so that your Drupal file is the 'default' and add another item
+   for your PhpGedView database with the appropriate options and give it the name 'phpgedview'.
+   This will allow us to easily query the PhpGedView database from within Drupal. 
+
+   $db_url['default']    = 'mysql://username:password@localhost/databasename'; // drupal db info
+   $db_url['phpgedview'] = 'mysql://username:password@localhost/databasename'; // pgv db info
+
+   If you are unable or unwilling to alter your settings.php file, and you don't make this
+   change, you will be given an option in admin/settings to provide this information and
+   store it in the database. That is a much less secure method than altering the settings.php
+   file, but it is available if you need it.
+
+3. If you're embedding PGV, adjust your theme to display a full-width page where PhpGedView is 
+   embedded. The exact method that will work best varies by theme. Try the following:
+   
+   In the Garland theme, put the following text at the very top of page.tpl.php (this
+   method may work in other themes, too. It's a good place to start.):
+   
+   <?php
+   if (function_exists('phpgedview_path')) { 
+     if (arg(0) == phpgedview_path()) {
+       unset($sidebar_left);
+       unset($sidebar_right);
+     }
+   }
+   ?>
+
+4. If the above step doesn't work, copy page.tpl.php to a file called page-phpgedview.tpl.php,
+   create a file called 'template.php' and put in it the following text, or add it to an
+   existing template.php file:
+   
+   <?php
+   function _phptemplate_variables($hook, $vars = NULL) {
+     switch ($hook) {
+       case ('page'):
+       if (function_exists('phpgedview_path')) { 
+         if (arg(0) == phpgedview_path()) {
+           $vars['template_file'] = 'page-phpgedview';
+         }
+       }
+       break;
+     }
+     return $vars;
+   }
+   ?>
+   
+   and put 'template.php' and 'page-phpgedview.tpl.php' into your theme folder (or add the 
+   text in 'template.php' to what is already there), then adapt page-phpgedview.tpl.php as 
+   necessary to get a one-column display.
+   
+   You can adapt the template to display a left or right column if you like, but that often 
+   does not provide enough room for the large PhpGedView screens. Make any other changes 
+   necessary so that this template can nicely display your PhpGedView theme.
+
+5. Go to your Drupal modules page and enable phpgedview. It will add a phpgedview_user_map file
+   to your database.
+
+6. Go to admin/access and identify who should have access to PhpGedView. Use 'view phpgedview'
+   for anyone who needs to be logged into PGV to view information. The PhpGedView program will 
+   restrict what they see based on the rights they are given in their PhpGedView user setup.
+
+7. Go to admin/settings/phpgedview and fill out the configuration options and map Drupal
+   users to PhpGedView users.
+
+   You will be able to give your embedded application a label. You can call it
+   PhpGedView or My Family Tree or anything else. That is how it will appear in Drupal titles and menus.
+
+   You will be able to create an internal path for your installation. This path will show up
+   on links and menus to point people to your PGV program. The internal path should be a 
+   different path than the stand-alone PhpGedView path (this is only an issue if PGV is
+   located in a subdirectory of your Drupal installation).
+
+8. You should now see a menu item for PhpGedView with your custom name. You can disable it
+   in the admin/menu screen if you don't want the menu item displayed. If you don't see your custom
+   name right away, you may need to clear your cache. Do that by going to the modules page and
+   just submitting the page without making any changes.
+
+9. Navigate to the internal path you set up for your installation and you should see
+   PhpGedView displayed, either in your custom Drupal template or as a stand-alone program.
+   
+CREDITS
+----------------------------
+Adapted and maintained for Drupal by Karen Stevenson
