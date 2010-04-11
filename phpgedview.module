@@ -666,7 +666,7 @@ function phpgedview_user_map_form() {
   }
   $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Submit'),
+    '#value' => t('Save'),
     );
   return $form;
 }
@@ -738,7 +738,6 @@ function phpgedview_pgv_users() {
   }
   phpgedview_pgv_disconnect();
   return $pgv;
-
 }
 
 /**
@@ -751,7 +750,6 @@ function phpgedview_drupal_users() {
     $drupal[$arr->name] = $arr;
   }
   return $drupal;
-
 }
 
 /**
@@ -764,7 +762,6 @@ function phpgedview_user_map() {
     $map[$arr->uid] = $arr->pgv;
   }
   return $map;
-
 }
 
 /**
@@ -785,10 +782,9 @@ function phpgedview_form_alter(&$form, $form_state, $form_id) {
 
     $_REQUEST['destination'] = variable_get('phpgedview_directory', '/phpgedview/') . $_POST['url'];
 
-    user_authenticate($_POST['username'], $_POST['password']);
+    user_authenticate(array('name' => $_POST['username'], 'pass' => $_POST['password']));
     exit;
   }
-
 }
 
 /**
@@ -831,23 +827,23 @@ function phpgedview_set_cookies($account, $reset = FALSE) {
 
     phpgedview_unset_cookies();
 
-   	// set pgv_user so that they will be logged in in gedview
-	  phpgedview_set_value('post_user', $username);
-	  phpgedview_set_value('post_email', $account->mail);
+    // set pgv_user so that they will be logged in in gedview
+    phpgedview_set_value('post_user', $username);
+    phpgedview_set_value('post_email', $account->mail);
     phpgedview_set_value('post_canedit', $canedit);
 
     //setup the  post_config variables as cookies so postgedview doesnt need to read them
-	  phpgedview_set_value('def_canadmin', variable_get('phpgedview_def_canadmin', 'no'));
-	  phpgedview_set_value('def_canedit', variable_get('phpgedview_def_canedit', 'access arguments'));
-	  phpgedview_set_value('def_rootid', variable_get('phpgedview_def_rootid', ''));
-	  phpgedview_set_value('def_verified', variable_get('phpgedview_def_verified', 'yes'));
-	  phpgedview_set_value('def_verified_by_admin', variable_get('phpgedview_def_verified_by_admin', 'yes'));
-	  phpgedview_set_value('def_create_user', variable_get('phpgedview_def_create_user', 'yes'));
-	  phpgedview_set_value('def_language', variable_get('phpgedview_def_language', 'english'));
-	  phpgedview_set_value('def_upass', variable_get('phpgedview_def_upass', ''));
-	  phpgedview_set_value('def_gedcom', variable_get('phpgedview_def_gedcom', ''));
-	  phpgedview_set_value('def_contact_method', variable_get('phpgedview_def_contact_method', 'messaging2'));
-  	phpgedview_set_value('def_theme', variable_get('phpgedview_def_theme', ''));
+    phpgedview_set_value('def_canadmin', variable_get('phpgedview_def_canadmin', 'no'));
+    phpgedview_set_value('def_canedit', variable_get('phpgedview_def_canedit', 'access arguments'));
+    phpgedview_set_value('def_rootid', variable_get('phpgedview_def_rootid', ''));
+    phpgedview_set_value('def_verified', variable_get('phpgedview_def_verified', 'yes'));
+    phpgedview_set_value('def_verified_by_admin', variable_get('phpgedview_def_verified_by_admin', 'yes'));
+    phpgedview_set_value('def_create_user', variable_get('phpgedview_def_create_user', 'yes'));
+    phpgedview_set_value('def_language', variable_get('phpgedview_def_language', 'english'));
+    phpgedview_set_value('def_upass', variable_get('phpgedview_def_upass', ''));
+    phpgedview_set_value('def_gedcom', variable_get('phpgedview_def_gedcom', ''));
+    phpgedview_set_value('def_contact_method', variable_get('phpgedview_def_contact_method', 'messaging2'));
+    phpgedview_set_value('def_theme', variable_get('phpgedview_def_theme', ''));
   }
   setcookie('pgv_permissions', base64_encode(serialize((array) $GLOBALS['phpgedview']['permissions'])), 0, '/');
 }
