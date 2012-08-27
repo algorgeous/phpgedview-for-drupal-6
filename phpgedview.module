@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 /**
  * @file
@@ -23,21 +22,21 @@
  */
 
 /**
- * Implementation of hook_perm().
+ * Implements hook_perm().
  */
 function phpgedview_perm() {
   return array('admin phpgedview', 'view phpgedview');
 }
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function phpgedview_menu() {
   global $user;
   phpgedview_set_cookies($user);
   $items = array();
 
-  // paths to the settings screen
+  // Paths to the settings screen.
 
   $items['admin/settings/phpgedview'] = array(
     'title' => t('PhpGedView'),
@@ -96,7 +95,7 @@ function phpgedview_menu() {
           'page arguments' => array('index.php'),
           'weight' => -10,
           );
-        $items[variable_get('phpgedview_path', 'phpgedview') .'/admin'] = array(
+        $items[variable_get('phpgedview_path', 'phpgedview') . '/admin'] = array(
           'type' => MENU_SUGGESTED_ITEM,
           'title' => t('Admin PhpGedView'),
           'access arguments' => array('admin phpgedview'),
@@ -104,7 +103,7 @@ function phpgedview_menu() {
           'page arguments' => array('admin.php'),
           'weight' => -10,
           );
-        $items[variable_get('phpgedview_path', 'phpgedview') .'/admin/useradmin'] = array(
+        $items[variable_get('phpgedview_path', 'phpgedview') . '/admin/useradmin'] = array(
           'type' => MENU_SUGGESTED_ITEM,
           'title' => t('Edit PhpGedView Users'),
           'access arguments' => array('admin phpgedview'),
@@ -115,9 +114,9 @@ function phpgedview_menu() {
       }
     }
 
-    // A variety of embedded paths are provided so the main sections in the iframe are
-    // bookmarkable, and to provide ways to send an admin directly to the user edit
-    // page or some other special destination.
+		// A variety of embedded paths are provided so the main sections in the
+		// iframe are bookmarkable, and to provide ways to send an admin directly
+		// to the user edit page or some other special destination.
 
     elseif (variable_get('phpgedview_configured', 0) && variable_get('phpgedview_type', 'embedded') == 'embedded') {
 
@@ -133,7 +132,7 @@ function phpgedview_menu() {
         'page arguments' => array('index.php'),
         'weight' => -10,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/index'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/index'] = array(
         'type' => MENU_DEFAULT_LOCAL_TASK,
         'title' => t('Welcome'),
         'access arguments' => array('view phpgedview'),
@@ -141,7 +140,7 @@ function phpgedview_menu() {
         'page arguments' => array('index.php?command=gedcom'),
         'weight' => -10,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/index/index'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/index/index'] = array(
         'type' => MENU_DEFAULT_LOCAL_TASK,
         'title' => t('Welcome'),
         'access arguments' => array('view phpgedview'),
@@ -149,7 +148,7 @@ function phpgedview_menu() {
         'page arguments' => array('index.php?command=gedcom'),
         'weight' => -10,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/index/portal'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/index/portal'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('My Portal'),
         'access arguments' => array(array('view phpgedview'), $access),
@@ -157,7 +156,7 @@ function phpgedview_menu() {
         'page arguments' => array('index.php?command=user'),
         'weight' => -9,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/pedigree'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/pedigree'] = array(
         'type' => MENU_LOCAL_TASK,
         'access arguments' => 'phpgedview view',
         'title' => t('Charts'),
@@ -166,7 +165,7 @@ function phpgedview_menu() {
         'page arguments' => array('pedigree.php'),
         'weight' => -8,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/pedigree/pedigree'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/pedigree/pedigree'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Pedigree'),
         'access arguments' => array('view phpgedview'),
@@ -174,7 +173,7 @@ function phpgedview_menu() {
         'page arguments' => array('pedigree.php'),
         'weight' => -10,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/pedigree/descendancy'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/pedigree/descendancy'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Decendancy'),
         'access arguments' => array('view phpgedview'),
@@ -182,7 +181,7 @@ function phpgedview_menu() {
         'page arguments' => array('descendancy.php'),
         'weight' => -9,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/pedigree/ancestry'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/pedigree/ancestry'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Ancestry'),
         'access arguments' => array('view phpgedview'),
@@ -190,7 +189,7 @@ function phpgedview_menu() {
         'page arguments' => array('ancestry.php'),
         'weight' => -8,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/pedigree/compact'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/pedigree/compact'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Compact'),
         'access arguments' => array('view phpgedview'),
@@ -198,7 +197,7 @@ function phpgedview_menu() {
         'page arguments' => array('compact.php'),
         'weight' => -7,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/pedigree/fanchart'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/pedigree/fanchart'] = array(
          'type' => MENU_LOCAL_TASK,
          'title' => t('Circle'),
          'access arguments' => array('view phpgedview'),
@@ -206,7 +205,7 @@ function phpgedview_menu() {
          'page arguments' => array('fanchart.php'),
          'weight' => -8,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/pedigree/hourglass'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/pedigree/hourglass'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Hourglass'),
         'access arguments' => array('view phpgedview'),
@@ -214,7 +213,7 @@ function phpgedview_menu() {
         'page arguments' => array('hourglass.php'),
         'weight' => -7,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/pedigree/familybook'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/pedigree/familybook'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Family'),
         'access arguments' => array('view phpgedview'),
@@ -222,7 +221,7 @@ function phpgedview_menu() {
         'page arguments' => array('familybook.php'),
         'weight' => -6,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/pedigree/timeline'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/pedigree/timeline'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Timeline'),
         'access arguments' => array('view phpgedview'),
@@ -230,7 +229,7 @@ function phpgedview_menu() {
         'page arguments' => array('timeline.php'),
         'weight' => -5,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/pedigree/relationship'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/pedigree/relationship'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Relationship'),
         'access arguments' => array('view phpgedview'),
@@ -238,7 +237,7 @@ function phpgedview_menu() {
         'page arguments' => array('relationship.php'),
         'weight' => -4,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/indilist'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/indilist'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Lists'),
         'access arguments' => array('view phpgedview'),
@@ -246,7 +245,7 @@ function phpgedview_menu() {
         'page arguments' => array('indilist.php'),
         'weight' => -7,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/indilist/indilist'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/indilist/indilist'] = array(
         'type' => MENU_DEFAULT_LOCAL_TASK,
         'title' => t('Individual'),
         'access arguments' => array('view phpgedview'),
@@ -254,7 +253,7 @@ function phpgedview_menu() {
         'page arguments' => array('indilist.php'),
         'weight' => -10,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/indilist/famlist'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/indilist/famlist'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Family'),
         'access arguments' => array('view phpgedview'),
@@ -262,7 +261,7 @@ function phpgedview_menu() {
         'page arguments' => array('famlist.php'),
         'weight' => -9,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/indilist/sourcelist'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/indilist/sourcelist'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Source'),
         'access arguments' => array('view phpgedview'),
@@ -270,7 +269,7 @@ function phpgedview_menu() {
         'page arguments' => array('sourcelist.php'),
         'weight' => -8,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/indilist/repolist'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/indilist/repolist'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Repository'),
         'access arguments' => array('view phpgedview'),
@@ -278,7 +277,7 @@ function phpgedview_menu() {
         'page arguments' => array('repolist.php'),
         'weight' => -7,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/indilist/placelist'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/indilist/placelist'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Place'),
         'access arguments' => array('view phpgedview'),
@@ -286,7 +285,7 @@ function phpgedview_menu() {
         'page arguments' => array('placelist.php'),
         'weight' => -6,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/indilist/medialist'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/indilist/medialist'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Media'),
         'access arguments' => array('view phpgedview'),
@@ -294,7 +293,7 @@ function phpgedview_menu() {
         'page arguments' => array('medialist.php'),
         'weight' => -5,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/indilist/patriarchlist'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/indilist/patriarchlist'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Patriarch'),
         'access arguments' => array('view phpgedview'),
@@ -302,7 +301,7 @@ function phpgedview_menu() {
         'page arguments' => array('patriarchlist.php'),
         'weight' => -4,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/indilist/aliveinyear'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/indilist/aliveinyear'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Alive in Year'),
         'access arguments' => array('view phpgedview'),
@@ -310,7 +309,7 @@ function phpgedview_menu() {
         'page arguments' => array('aliveinyear.php'),
         'weight' => -3,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/calendar'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/calendar'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Calendar'),
         'access arguments' => array('view phpgedview'),
@@ -318,7 +317,7 @@ function phpgedview_menu() {
         'page arguments' => array('calendar.php'),
         'weight' => -6,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/calendar/day'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/calendar/day'] = array(
         'type' => MENU_DEFAULT_LOCAL_TASK,
         'title' => t('Day'),
         'access arguments' => array('view phpgedview'),
@@ -326,7 +325,7 @@ function phpgedview_menu() {
         'page arguments' => array('calendar.php'),
         'weight' => -6,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/calendar/calendar'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/calendar/calendar'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Month'),
         'access arguments' => array('view phpgedview'),
@@ -334,7 +333,7 @@ function phpgedview_menu() {
         'page arguments' => array('calendar.php?action=calendar'),
         'weight' => -6,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/calendar/year'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/calendar/year'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Year'),
         'access arguments' => array('view phpgedview'),
@@ -342,7 +341,7 @@ function phpgedview_menu() {
         'page arguments' => array('calendar.php?action=year'),
         'weight' => -6,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/reportengine'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/reportengine'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Reports'),
         'access arguments' => array('view phpgedview'),
@@ -350,7 +349,7 @@ function phpgedview_menu() {
         'page arguments' => array('reportengine.php'),
         'weight' => -5,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/search'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/search'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Search'),
         'access arguments' => array(array('view phpgedview'), $access),
@@ -358,7 +357,7 @@ function phpgedview_menu() {
         'page arguments' => array('search.php?action=general'),
         'weight' => 1,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/search/search'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/search/search'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('General Search'),
         'access arguments' => array(array('view phpgedview'), $access),
@@ -366,7 +365,7 @@ function phpgedview_menu() {
         'page arguments' => array('search.php?action=general'),
         'weight' => -8,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/search/soundex'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/search/soundex'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Soundex Search'),
         'access arguments' => array(array('view phpgedview'), $access),
@@ -374,7 +373,7 @@ function phpgedview_menu() {
         'page arguments' => array('search.php?action=soundex'),
         'weight' => -7,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/admin'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/admin'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Admin'),
         'access arguments' => array('admin phpgedview'),
@@ -382,7 +381,7 @@ function phpgedview_menu() {
         'page arguments' => array('admin.php'),
         'weight' => 0,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/admin/admin'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/admin/admin'] = array(
         'type' => MENU_DEFAULT_LOCAL_TASK,
         'title' => t('Admin'),
         'access arguments' => array('admin phpgedview'),
@@ -390,7 +389,7 @@ function phpgedview_menu() {
         'page arguments' => array('admin.php'),
         'weight' => -10,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/admin/useradmin'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/admin/useradmin'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Edit Users'),
         'access arguments' => array('admin phpgedview'),
@@ -398,7 +397,7 @@ function phpgedview_menu() {
         'page arguments' => array('useradmin.php', arg(3)),
         'weight' => -9,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/admin/editgedcoms'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/admin/editgedcoms'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Edit Gedcoms'),
         'access arguments' => array('admin phpgedview'),
@@ -406,7 +405,7 @@ function phpgedview_menu() {
         'page arguments' => array('editgedcoms.php'),
         'weight' => -8,
       );
-      $items[variable_get('phpgedview_path', 'phpgedview') .'/admin/media'] = array(
+      $items[variable_get('phpgedview_path', 'phpgedview') . '/admin/media'] = array(
         'type' => MENU_LOCAL_TASK,
         'title' => t('Manage Media'),
         'access arguments' => array('admin phpgedview'),
@@ -426,11 +425,11 @@ function phpgedview_menu() {
  * use Drupal access control over the link.
  */
 function phpgedview_external_path() {
-  // strip the leading slash from the external directory
+  // Strip the leading slash from the external directory.
   $directory = substr(variable_get('phpgedview_directory', '/phpgedview/'), 1);
-  // find out how deep the Drupal installation is
+  // Find out how deep the Drupal installation is.
   $internal_depth = intval(sizeof(explode('/', base_path())) - 2);
-  // prepend ../ enough times to get a relative link back to the external program
+  // Prepend ../ enough times to get a relative link back to the external program.
   return str_repeat('../', $internal_depth) . $directory;
 }
 
@@ -486,7 +485,7 @@ function phpgedview_embedded_page($path = 'index.php', $uid = 0) {
   drupal_add_js(drupal_get_path('module', 'phpgedview') .'/postwrap.js');
 
   return '<div class="contentpane">
-<iframe onload="iFrameHeight()" id="blockrandom" src="' .$url .'" width="100%" height="500" scrolling="auto" align="top" frameborder="0" class="wrapper">
+<iframe onload="iFrameHeight()" id="blockrandom" src="' . $url . '" width="100%" height="500" scrolling="auto" align="top" frameborder="0" class="wrapper">
 This option will not work correctly.  Unfortunately, your browser does not support Inline Frames. </iframe></div>';
 
 }
@@ -642,7 +641,7 @@ function phpgedview_user_form($type = 'settings', $edit = NULL) {
  *  Form to map Drupal users to PGV users.
  */
 function phpgedview_user_map_form() {
-  // display user map
+  // Display user map.
   $form = array();
   $map = array();
 
@@ -653,12 +652,13 @@ function phpgedview_user_map_form() {
   $form['ids'] = array();
 
   foreach ($drupal as $name => $account) {
-    // skip the anonymous user
+    // Skip the anonymous user.
     if ($name > '') {
       $form['uid_'. $account->uid] = array(
         '#type' => 'select',
         '#options' => $options,
-        // use mapped name if available, otherwise see if there is a matching value in $pgv
+				// Use mapped name if available, otherwise see if there is a matching
+				// value in $pgv.
         '#default_value' => isset($map[$account->uid]) ? $map[$account->uid] : $pgv[$name]->u_username,
         '#label' => $name,
       );
@@ -667,7 +667,7 @@ function phpgedview_user_map_form() {
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
-    );
+  );
   return $form;
 }
 
@@ -706,7 +706,8 @@ function phpgedview_user_map_form_submit($form_id, $form_values) {
     db_query("INSERT INTO {phpgedview_user_map} (uid, pgv) VALUES (%d, '%s')", $uid, $val);
   }
 
-  // Get current values and clean up since PGV may have changes that haven't been recorded in Drupal.
+	// Get current values and clean up since PGV may have changes that haven't
+	// been recorded in Drupal.
 
   $pgv     = (array) phpgedview_pgv_users();
   $drupal  = (array) phpgedview_drupal_users();
@@ -765,19 +766,19 @@ function phpgedview_user_map() {
 }
 
 /**
- *  Implementation of hook_form_alter.
+ *  Implements hook_form_alter.
  *
  *  Handle login requests redirected from PhpGedView.
  */
 function phpgedview_form_alter(&$form, $form_state, $form_id) {
 
-  // coming from a link in PGV, no login info provided yet
+  // Coming from a link in PGV, no login info provided yet.
   if ($form_id == 'user_login' && strstr($_GET['url'], 'ged')) {
 
-    // pass the url to the form so user will return to that page
+    // Pass the url to the form so user will return to that page.
     $form['#redirect'] = variable_get('phpgedview_directory', '/phpgedview/') . urldecode($_GET['url']);
 
-  // coming from a submitted PGV login form
+  // Coming from a submitted PGV login form.
   } elseif ($form_id == 'user_login' &&  $_POST['ged'] && $_POST['url']) {
 
     $_REQUEST['destination'] = variable_get('phpgedview_directory', '/phpgedview/') . $_POST['url'];
@@ -788,7 +789,7 @@ function phpgedview_form_alter(&$form, $form_state, $form_id) {
 }
 
 /**
- * Implementation of hook_user().
+ * Implements hook_user().
  */
 function phpgedview_user($op, &$edit, &$account, $category = NULL) {
 
@@ -809,7 +810,7 @@ function phpgedview_user($op, &$edit, &$account, $category = NULL) {
       db_query("DELETE FROM {phpgedview_user_map} WHERE uid = '%s'", $account->uid);
       break;
 
-  // display a link on the Drupal user account to their account in PhpGedView
+  // Display a link on the Drupal user account to their account in PhpGedView.
   case ('view'):
       if (array('admin phpgedview')) {
         $links[] = phpgedview_userlink($account->uid);
@@ -827,12 +828,13 @@ function phpgedview_set_cookies($account, $reset = FALSE) {
 
     phpgedview_unset_cookies();
 
-    // set pgv_user so that they will be logged in in gedview
+    // Set pgv_user so that they will be logged in in gedview.
     phpgedview_set_value('post_user', $username);
     phpgedview_set_value('post_email', $account->mail);
     phpgedview_set_value('post_canedit', $canedit);
 
-    //setup the  post_config variables as cookies so postgedview doesnt need to read them
+		// Setup the  post_config variables as cookies so postgedview doesnt
+		// need to read them.
     phpgedview_set_value('def_canadmin', variable_get('phpgedview_def_canadmin', 'no'));
     phpgedview_set_value('def_canedit', variable_get('phpgedview_def_canedit', 'access arguments'));
     phpgedview_set_value('def_rootid', variable_get('phpgedview_def_rootid', ''));
@@ -876,14 +878,15 @@ function phpgedview_set_value($key, $value) {
  *  A link to a PhpGedView user edit screen
  */
 function phpgedview_userlink($uid) {
-  return l(t('Edit Account'), (variable_get('phpgedview_type', 'embedded') == 'embedded' ? variable_get('phpgedview_path', 'phpgedview') .'/admin/useradmin/'. $uid : phpgedview_external_page('useradmin.php', $uid)));
+  return l(t('Edit Account'), (variable_get('phpgedview_type', 'embedded') == 'embedded' ? variable_get('phpgedview_path', 'phpgedview') . '/admin/useradmin/'. $uid : phpgedview_external_page('useradmin.php', $uid)));
 }
 
 /**
  *  Attempt to connect to the PGV database.
  *
- *  The database config could be set either in the variable 'phpgedview_db' or manually by
- *  altering settings.php to make $db_url an array with 'phpgedview' as one of the keys.
+ *  The database config could be set either in the variable 'phpgedview_db' or
+ *  manually by altering settings.php to make $db_url an array with 'phpgedview'
+ *  as one of the keys.
  *
  *  @return TRUE if successful, FALSE if not.
  */
