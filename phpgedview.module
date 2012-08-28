@@ -732,9 +732,9 @@ function phpgedview_pgv_users() {
 
   $pgv = array();
   if (phpgedview_pgv_connect()) {
-    $results = db_query("SELECT * FROM " . variable_get('phpgedview_prefix', 'pgv_') . "users ORDER BY u_username");
+    $results = db_query("SELECT * FROM " . variable_get('phpgedview_prefix', 'pgv_') . "user ORDER BY user_name");
     while($arr = db_fetch_object($results)) {
-      $pgv[$arr->u_username] = $arr;
+      $pgv[$arr->user_name] = $arr;
     }
   }
   phpgedview_pgv_disconnect();
