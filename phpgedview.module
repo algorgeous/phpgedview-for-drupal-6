@@ -114,9 +114,9 @@ function phpgedview_menu() {
       }
     }
 
-		// A variety of embedded paths are provided so the main sections in the
-		// iframe are bookmarkable, and to provide ways to send an admin directly
-		// to the user edit page or some other special destination.
+    // A variety of embedded paths are provided so the main sections in the
+    // iframe are bookmarkable, and to provide ways to send an admin directly
+    // to the user edit page or some other special destination.
 
     elseif (variable_get('phpgedview_configured', 0) && variable_get('phpgedview_type', 'embedded') == 'embedded') {
 
@@ -651,16 +651,19 @@ function phpgedview_user_map_form() {
   $options = drupal_map_assoc(array_merge(array(''), array_keys($pgv)));
   $form['ids'] = array();
 
+  $form['user_map'] = array(
+    '#tree' => TRUE,
+  );
   foreach ($drupal as $name => $account) {
     // Skip the anonymous user.
     if ($name > '') {
-      $form['uid_'. $account->uid] = array(
+      $form['user_map']['uid_'. $account->uid] = array(
         '#type' => 'select',
+        '#title' => $name,
         '#options' => $options,
-				// Use mapped name if available, otherwise see if there is a matching
-				// value in $pgv.
-        '#default_value' => isset($map[$account->uid]) ? $map[$account->uid] : $pgv[$name]->u_username,
-        '#label' => $name,
+        // Use mapped name if available, otherwise see if there is a matching
+        // value in $pgv.
+        '#default_value' => isset($map[$account->uid]) ? $map[$account->uid] : $pgv[$name]->user_name,
       );
     }
   }
@@ -700,19 +703,22 @@ function theme_phpgedview_user_map_form($form) {
 function phpgedview_user_map_form_submit($form_id, $form_values) {
   global $user;
 
+  $user_map = $form_values['values']['user_map'];
   // Add new values to the map.
-  foreach ($form_values as $key => $val) {
+  foreach ($user_map as $key => $val) {
     $uid = intval(str_replace('uid_', '', $key));
+    // TODO: Make sure value is not in table before insertion.
     db_query("INSERT INTO {phpgedview_user_map} (uid, pgv) VALUES (%d, '%s')", $uid, $val);
   }
 
-	// Get current values and clean up since PGV may have changes that haven't
-	// been recorded in Drupal.
+  // Get current values and clean up since PGV may have changes that haven't
+  // been recorded in Drupal.
 
   $pgv     = (array) phpgedview_pgv_users();
   $drupal  = (array) phpgedview_drupal_users();
   $map     = phpgedview_user_map();
 
+  // TODO/BUG: Not sure what this is doing here.
   foreach ($map as $key => $value) {
     if (!array_key_exists($value, $pgv) || !array_key_exists($key, $drupal)) {
       db_query("DELETE FROM {phpgedview_user_map} WHERE pgv = '%s'", $value);
@@ -833,8 +839,8 @@ function phpgedview_set_cookies($account, $reset = FALSE) {
     phpgedview_set_value('post_email', $account->mail);
     phpgedview_set_value('post_canedit', $canedit);
 
-		// Setup the  post_config variables as cookies so postgedview doesnt
-		// need to read them.
+    // Setup the  post_config variables as cookies so postgedview doesn't
+    // need to read them.
     phpgedview_set_value('def_canadmin', variable_get('phpgedview_def_canadmin', 'no'));
     phpgedview_set_value('def_canedit', variable_get('phpgedview_def_canedit', 'access arguments'));
     phpgedview_set_value('def_rootid', variable_get('phpgedview_def_rootid', ''));
